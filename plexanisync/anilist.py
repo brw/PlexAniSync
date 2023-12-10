@@ -578,6 +578,13 @@ class Anilist:
             ):
                 # episode watch count higher than plex
                 new_status = status if status == "REPEATING" else "CURRENT"
+                if new_status == "REPEATING":
+                    logger.warning(
+                        f"Plex episode watch count [{watched_episode_count}] was higher than the one "
+                        f"on AniList [{anilist_episodes_watched}] which has total of {anilist_total_episodes} "
+                        f"episodes | However, series is marked as REPEATING so skipping update"
+                    )
+                    return
                 logger.warning(
                     f"Plex episode watch count [{watched_episode_count}] was higher than the one "
                     f"on AniList [{anilist_episodes_watched}] which has total of {anilist_total_episodes} "
