@@ -50,6 +50,7 @@ class Anilist:
             plex_title = plex_series.title
             plex_title_sort = plex_series.title_sort
             plex_title_original = plex_series.title_original
+            plex_guid = plex_series.guid
             plex_year = plex_series.year
             plex_seasons = plex_series.seasons
             plex_show_rating = plex_series.rating
@@ -65,7 +66,7 @@ class Anilist:
                 for plex_season in plex_seasons:
 
                     season_mappings: List[AnilistCustomMapping] = self.__retrieve_season_mappings(
-                        plex_title, plex_season.season_number
+                        plex_title, plex_guid, plex_season.season_number
                     )
                     # split season -> handle it in "any remaining seasons" section
                     if season_mappings and len(season_mappings) == 1:
@@ -171,7 +172,7 @@ class Anilist:
                     ]
                     potential_titles = list(potential_titles_cleaned)
 
-                    season_mappings = self.__retrieve_season_mappings(plex_title, season_number)
+                    season_mappings = self.__retrieve_season_mappings(plex_title, plex_guid, season_number)
                     # Custom mapping check - check user list
                     if season_mappings:
                         watchcounts = self.__map_watchcount_to_seasons(plex_title, season_mappings, plex_season.watched_episodes)
@@ -262,7 +263,7 @@ class Anilist:
                     media_id_search = None
                     # ignore the Plex year since Plex does not have years for seasons
                     skip_year_check = True
-                    season_mappings = self.__retrieve_season_mappings(plex_title, season_number)
+                    season_mappings = self.__retrieve_season_mappings(plex_title, plex_guid, season_number)
                     if season_mappings:
                         watchcounts = self.__map_watchcount_to_seasons(plex_title, season_mappings, plex_season.watched_episodes)
 
@@ -647,24 +648,28 @@ class Anilist:
         self, series: AnilistSeries, watched_episode_count: int, anilist_episodes_watched: int, new_status: str,
         plex_rating: int
     ):
-        # calculate episode difference and iterate up so activity stream lists
-        # episodes watched if episode difference exceeds 32 only update most
-        # recent as otherwise will flood the notification feed
+        # calculate episode difference
         episode_difference = watched_episode_count - anilist_episodes_watched
-        if episode_difference > 32:
+        # If episode difference exceeds 32 only update most recent as otherwise will flood the notification feed.
+        # Also set it to the max episode count directly if the series was completed.
+        if episode_difference > 32 or new_status == "COMPLETED":
             self.graphql.update_series(series.anilist_id, watched_episode_count, new_status, plex_rating)
         else:
+            # send 1 update per watched episode for the activity feed
             for current_episodes_watched in range(anilist_episodes_watched + 1, watched_episode_count + 1):
                 self.graphql.update_series(series.anilist_id, current_episodes_watched, new_status, plex_rating)
 
-    def __retrieve_season_mappings(self, title: str, season: int) -> List[AnilistCustomMapping]:
+    def __retrieve_season_mappings(self, title: str, guid: str, season: int) -> List[AnilistCustomMapping]:
         season_mappings: List[AnilistCustomMapping] = []
 
-        if self.custom_mappings and title.lower() in self.custom_mappings:
-            season_mappings = self.custom_mappings[title.lower()]
-            # filter mappings by season
-            season_mappings = [e for e in season_mappings if e.season == season]
+        if self.custom_mappings:
+            if guid in self.custom_mappings:
+                season_mappings = self.custom_mappings[guid]
+            elif title.lower() in self.custom_mappings:
+                season_mappings = self.custom_mappings[title.lower()]
 
+        # filter mappings by season
+        season_mappings = [e for e in season_mappings if e.season == season]
         return season_mappings
 
     def __map_watchcount_to_seasons(
