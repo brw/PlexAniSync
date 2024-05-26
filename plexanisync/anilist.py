@@ -552,37 +552,13 @@ class Anilist:
             if hasattr(series, "status"):
                 status = series.status
 
-            if status == "COMPLETED":
-                if plex_rating and series.score != plex_rating and self.graphql.sync_ratings:
-                    logger.info(
-                        "Series is completed, but Plex rating is different than Anilist score. "
-                        "The Anilist score will be updated to the Plex rating."
-                    )
-                    self.graphql.update_score(series.anilist_id, plex_rating)
-                else:
-                    logger.debug(
-                        "Series is already marked as completed on AniList so skipping update"
-                    )
-                return
-
-            if hasattr(series, "started_year") and year != series.started_year:
-                if not ignore_year:
-                    logger.error(
-                        f"Series year did not match (skipping update) => Plex has {year} and AniList has {series.started_year}"
-                    )
-                    continue
-                else:
-                    logger.info(
-                        f"Series year did not match however skip year check was given so adding anyway => "
-                        f"Plex has {year} and AniList has {series.started_year}"
-                    )
-
             anilist_total_episodes = 0
             anilist_episodes_watched = 0
             anilist_media_status = ""
 
             if hasattr(series, "media_status"):
                 anilist_media_status = series.media_status
+
             if hasattr(series, "episodes"):
                 if series.episodes:
                     try:
@@ -600,11 +576,45 @@ class Anilist:
                         "on AniList (NoneType), using Plex watched count as fallback"
                     )
                     anilist_total_episodes = watched_episode_count
+
             if hasattr(series, "progress"):
                 try:
                     anilist_episodes_watched = int(series.progress)
                 except BaseException:
                     pass
+
+            if status == "COMPLETED":
+                if watched_episode_count < anilist_episodes_watched:
+                    logger.info(
+                        "Series is completed, but Plex episode count is lower than AniList episodes watched. "
+                        "The AniList entry will be updated to REPEATING and progress reset to 0."
+                    )
+                    self.graphql.update_series(series.anilist_id, 0, "REPEATING", plex_rating)
+                    anilist_episodes_watched = 0
+                elif plex_rating and series.score != plex_rating and self.graphql.sync_ratings:
+                    logger.info(
+                        "Series is completed, but Plex rating is different than Anilist score. "
+                        "The Anilist score will be updated to the Plex rating."
+                    )
+                    self.graphql.update_score(series.anilist_id, plex_rating)
+                    return
+                else:
+                    logger.debug(
+                        "Series is already marked as completed on AniList so skipping update"
+                    )
+                    return
+
+            if hasattr(series, "started_year") and year != series.started_year:
+                if not ignore_year:
+                    logger.error(
+                        f"Series year did not match (skipping update) => Plex has {year} and AniList has {series.started_year}"
+                    )
+                    continue
+                else:
+                    logger.info(
+                        f"Series year did not match however skip year check was given so adding anyway => "
+                        f"Plex has {year} and AniList has {series.started_year}"
+                    )
 
             if (
                 watched_episode_count >= anilist_total_episodes > 0
