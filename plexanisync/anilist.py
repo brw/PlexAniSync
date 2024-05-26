@@ -25,7 +25,9 @@ class AnilistMatch:
 
 
 class Anilist:
-    def __init__(self, anilist_settings: SectionProxy, custom_mappings: Dict[str, List[AnilistCustomMapping]]):
+    def __init__(
+        self, anilist_settings: SectionProxy, custom_mappings: Dict[str, List[AnilistCustomMapping]]
+    ):
         self.anilist_settings = anilist_settings
         self.custom_mappings = custom_mappings
         self.graphql = GraphQL(anilist_settings)
@@ -44,7 +46,9 @@ class Anilist:
         logger.info(f"Found {len(anilist_series)} anime series on list")
         return anilist_series
 
-    def match_to_plex(self, anilist_series: List[AnilistSeries], plex_series_watched: List[PlexWatchedSeries]):
+    def match_to_plex(
+        self, anilist_series: List[AnilistSeries], plex_series_watched: List[PlexWatchedSeries]
+    ):
         logger.info("Matching Plex series to Anilist")
         for plex_series in plex_series_watched:
             plex_title = plex_series.title
@@ -64,7 +68,6 @@ class Anilist:
             if len(plex_seasons) > 1:
                 anilist_matches: List[AnilistMatch] = []
                 for plex_season in plex_seasons:
-
                     season_mappings: List[AnilistCustomMapping] = self.__retrieve_season_mappings(
                         plex_title, plex_guid, plex_season.season_number
                     )
@@ -81,13 +84,15 @@ class Anilist:
 
                         if not match:
                             # Create first match dict for this anilist id
-                            anilist_matches.append(AnilistMatch(
-                                matched_id,
-                                plex_season.watched_episodes - mapped_start + 1,
-                                plex_season.last_episode,
-                                [plex_season.season_number],
-                                [plex_season.rating]
-                            ))
+                            anilist_matches.append(
+                                AnilistMatch(
+                                    matched_id,
+                                    plex_season.watched_episodes - mapped_start + 1,
+                                    plex_season.last_episode,
+                                    [plex_season.season_number],
+                                    [plex_season.rating],
+                                )
+                            )
                             continue
                         # For multiple seasons with the same id
                         # If the start of this season has been mapped use that.
@@ -121,7 +126,7 @@ class Anilist:
                         True,
                         match.watched_episodes,
                         match.anilist_id,
-                        average_season_rating or plex_show_rating
+                        average_season_rating or plex_show_rating,
                     )
 
             # Start processing of any remaining seasons
@@ -150,7 +155,9 @@ class Anilist:
                     plex_title_original_clean = self.__clean_title(plex_title_original)
                     plex_title_without_year = re.sub(r"\(\d{4}\)", "", plex_title).strip()
                     plex_title_sort_without_year = re.sub(r"\(\d{4}\)", "", plex_title_sort).strip()
-                    plex_title_original_without_year = re.sub(r"\(\d{4}\)", "", plex_title_original).strip()
+                    plex_title_original_without_year = re.sub(
+                        r"\(\d{4}\)", "", plex_title_original
+                    ).strip()
 
                     potential_titles = [
                         plex_title.lower(),
@@ -166,16 +173,18 @@ class Anilist:
 
                     # Remove duplicates from potential title list
                     potential_titles_cleaned = [
-                        i
-                        for n, i in enumerate(potential_titles)
-                        if i not in potential_titles[:n]
+                        i for n, i in enumerate(potential_titles) if i not in potential_titles[:n]
                     ]
                     potential_titles = list(potential_titles_cleaned)
 
-                    season_mappings = self.__retrieve_season_mappings(plex_title, plex_guid, season_number)
+                    season_mappings = self.__retrieve_season_mappings(
+                        plex_title, plex_guid, season_number
+                    )
                     # Custom mapping check - check user list
                     if season_mappings:
-                        watchcounts = self.__map_watchcount_to_seasons(plex_title, season_mappings, plex_season.watched_episodes)
+                        watchcounts = self.__map_watchcount_to_seasons(
+                            plex_title, season_mappings, plex_season.watched_episodes
+                        )
 
                         for anime_id, watchcount in watchcounts.items():
                             logger.info(
@@ -183,7 +192,13 @@ class Anilist:
                             )
 
                             self.__add_or_update_show_by_id(
-                                anilist_series, plex_title, plex_year, True, watchcount, anime_id, plex_rating
+                                anilist_series,
+                                plex_title,
+                                plex_year,
+                                True,
+                                watchcount,
+                                anime_id,
+                                plex_rating,
                             )
 
                         # If custom match found continue to next
@@ -192,15 +207,25 @@ class Anilist:
                     # Reordered checks from above to ensure that custom mappings always take precedent
                     if plex_anilist_id:
                         logger.info(
-                            f"Series {plex_title} has Anilist ID {plex_anilist_id} in its metadata, using that for updating")
-                        self.__add_or_update_show_by_id(anilist_series, plex_title, plex_year, True, plex_watched_episode_count,
-                                                        plex_anilist_id, plex_rating)
+                            f"Series {plex_title} has Anilist ID {plex_anilist_id} in its metadata, using that for updating"
+                        )
+                        self.__add_or_update_show_by_id(
+                            anilist_series,
+                            plex_title,
+                            plex_year,
+                            True,
+                            plex_watched_episode_count,
+                            plex_anilist_id,
+                            plex_rating,
+                        )
                         continue
 
                     # Regular matching
                     if not found_match:
                         for series in anilist_series:
-                            self.__match_series_against_potential_titles(series, potential_titles, matched_anilist_series)
+                            self.__match_series_against_potential_titles(
+                                series, potential_titles, matched_anilist_series
+                            )
 
                     # Series not listed so search for it
                     if not all(matched_anilist_series) or not matched_anilist_series:
@@ -226,9 +251,7 @@ class Anilist:
 
                         media_id_search = None
                         for potential_title in potential_titles_search:
-                            logger.warning(
-                                f"Searching best match using title: {potential_title}"
-                            )
+                            logger.warning(f"Searching best match using title: {potential_title}")
                             media_id_search = self.__find_id_best_match(potential_title, plex_year)
 
                             if media_id_search:
@@ -241,12 +264,14 @@ class Anilist:
                                     plex_year,
                                     plex_watched_episode_count,
                                     False,
-                                    plex_rating
+                                    plex_rating,
                                 )
                                 break
 
                         if not media_id_search:
-                            self.__log_failed_match(f"Failed to find valid match on AniList for: {plex_title}")
+                            self.__log_failed_match(
+                                f"Failed to find valid match on AniList for: {plex_title}"
+                            )
 
                     # Series exists on list so checking if update required
                     else:
@@ -256,23 +281,33 @@ class Anilist:
                             plex_watched_episode_count,
                             matched_anilist_series,
                             skip_year_check,
-                            plex_rating
+                            plex_rating,
                         )
                         matched_anilist_series = []
                 else:
                     media_id_search = None
                     # ignore the Plex year since Plex does not have years for seasons
                     skip_year_check = True
-                    season_mappings = self.__retrieve_season_mappings(plex_title, plex_guid, season_number)
+                    season_mappings = self.__retrieve_season_mappings(
+                        plex_title, plex_guid, season_number
+                    )
                     if season_mappings:
-                        watchcounts = self.__map_watchcount_to_seasons(plex_title, season_mappings, plex_season.watched_episodes)
+                        watchcounts = self.__map_watchcount_to_seasons(
+                            plex_title, season_mappings, plex_season.watched_episodes
+                        )
 
                         for anime_id, watchcount in watchcounts.items():
                             logger.info(
                                 f"Used custom mapping |  title: {plex_title} | season: {season_number} | anilist id: {anime_id}"
                             )
                             self.__add_or_update_show_by_id(
-                                anilist_series, plex_title, plex_year, True, watchcount, anime_id, plex_rating
+                                anilist_series,
+                                plex_title,
+                                plex_year,
+                                True,
+                                watchcount,
+                                anime_id,
+                                plex_rating,
                             )
 
                         # If custom match found continue to next
@@ -292,11 +327,18 @@ class Anilist:
                     plex_title_lookup = plex_title
                     if media_id_search:
                         self.__add_or_update_show_by_id(
-                            anilist_series, plex_title, plex_year, skip_year_check,
-                            plex_watched_episode_count, media_id_search, plex_rating
+                            anilist_series,
+                            plex_title,
+                            plex_year,
+                            skip_year_check,
+                            plex_watched_episode_count,
+                            media_id_search,
+                            plex_rating,
                         )
                     else:
-                        self.__log_failed_match(f"Failed to find valid season title match on AniList for: {plex_title_lookup} season {season_number}")
+                        self.__log_failed_match(
+                            f"Failed to find valid season title match on AniList for: {plex_title_lookup} season {season_number}"
+                        )
 
     def __int_to_roman_numeral(self, decimal: int) -> str:
         if not 0 < decimal < 4000:
@@ -319,7 +361,7 @@ class Anilist:
     def __clean_failed_matches_file(self):
         try:
             # create or overwrite the file with empty content
-            with open("failed_matches.txt", 'w', encoding="utf-8"):
+            with open("failed_matches.txt", "w", encoding="utf-8"):
                 pass
         except BaseException:
             pass
@@ -328,11 +370,13 @@ class Anilist:
         return next(filter(lambda s: s.anilist_id == anime_id, anilist_series), None)
 
     def __match_series_against_potential_titles(
-        self, series: AnilistSeries, potential_titles: List[str], matched_anilist_series: List[AnilistSeries]
+        self,
+        series: AnilistSeries,
+        potential_titles: List[str],
+        matched_anilist_series: List[AnilistSeries],
     ):
         for title in series.titles():
-            if (title.lower() in potential_titles
-                    or self.__clean_title(title) in potential_titles):
+            if title.lower() in potential_titles or self.__clean_title(title) in potential_titles:
                 if series not in matched_anilist_series:
                     matched_anilist_series.append(series)
 
@@ -403,9 +447,7 @@ class Anilist:
                             )
                         else:
                             media_id = match.anilist_id
-                            logger.info(
-                                f"Found match: {original_title} [{media_id}]"
-                            )
+                            logger.info(f"Found match: {original_title} [{media_id}]")
                             break
         if media_id == 0:
             logger.error(f"No match found for title: {title}")
@@ -430,9 +472,7 @@ class Anilist:
                     original_title = titles_for_matching[match_title]
                     if year == started_year:
                         media_id = match.anilist_id
-                        logger.warning(
-                            f"Found match: {original_title} [{media_id}]"
-                        )
+                        logger.warning(f"Found match: {original_title} [{media_id}]")
                         break
                     else:
                         logger.info(
@@ -443,8 +483,14 @@ class Anilist:
         return media_id
 
     def __add_or_update_show_by_id(
-        self, anilist_series: List[AnilistSeries], plex_title: str, plex_year: int,
-        skip_year_check: bool, watched_episodes: int, anime_id: int, plex_rating: int
+        self,
+        anilist_series: List[AnilistSeries],
+        plex_title: str,
+        plex_year: int,
+        skip_year_check: bool,
+        watched_episodes: int,
+        anime_id: int,
+        plex_rating: int,
     ):
         series = self.__find_mapped_series(anilist_series, anime_id)
         if series:
@@ -453,12 +499,7 @@ class Anilist:
                     f"Updating series: {series.title_english} | Episodes watched: {watched_episodes}"
                 )
                 self.__update_entry(
-                    plex_title,
-                    plex_year,
-                    watched_episodes,
-                    [series],
-                    skip_year_check,
-                    plex_rating
+                    plex_title, plex_year, watched_episodes, [series], skip_year_check, plex_rating
                 )
             elif series.progress == watched_episodes:
                 logger.debug("Episodes watched was the same on AniList and Plex so skipping update")
@@ -471,16 +512,17 @@ class Anilist:
                 f"Adding new series id to list: {anime_id} | Episodes watched: {watched_episodes}"
             )
             self.__add_by_id(
-                anime_id,
-                plex_title,
-                plex_year,
-                watched_episodes,
-                skip_year_check,
-                plex_rating
+                anime_id, plex_title, plex_year, watched_episodes, skip_year_check, plex_rating
             )
 
     def __add_by_id(
-        self, anilist_id: int, plex_title: str, plex_year: int, plex_watched_episode_count: int, ignore_year: bool, plex_rating: int
+        self,
+        anilist_id: int,
+        plex_title: str,
+        plex_year: int,
+        plex_watched_episode_count: int,
+        ignore_year: bool,
+        plex_rating: int,
     ):
         media_lookup_result = self.graphql.search_by_id(anilist_id)
         if media_lookup_result:
@@ -490,16 +532,19 @@ class Anilist:
                 plex_watched_episode_count,
                 [media_lookup_result],
                 ignore_year,
-                plex_rating
+                plex_rating,
             )
         else:
-            logger.error(
-                f"failed to get anilist search result for id: {anilist_id}"
-            )
+            logger.error(f"failed to get anilist search result for id: {anilist_id}")
 
     def __update_entry(
-        self, title: str, year: int, watched_episode_count: int, matched_anilist_series: List[AnilistSeries],
-        ignore_year: bool, plex_rating: int
+        self,
+        title: str,
+        year: int,
+        watched_episode_count: int,
+        matched_anilist_series: List[AnilistSeries],
+        ignore_year: bool,
+        plex_rating: int,
     ):
         for series in matched_anilist_series:
             status = ""
@@ -572,12 +617,15 @@ class Anilist:
                     "AniList entry to completed"
                 )
 
-                self.__update_episode_incremental(series, watched_episode_count, anilist_episodes_watched, "COMPLETED", plex_rating)
+                self.__update_episode_incremental(
+                    series,
+                    watched_episode_count,
+                    anilist_episodes_watched,
+                    "COMPLETED",
+                    plex_rating,
+                )
                 return
-            elif (
-                watched_episode_count > anilist_episodes_watched
-                and anilist_total_episodes > 0
-            ):
+            elif watched_episode_count > anilist_episodes_watched and anilist_total_episodes > 0:
                 # episode watch count higher than plex
                 new_status = status if status == "REPEATING" else "CURRENT"
                 logger.warning(
@@ -586,7 +634,9 @@ class Anilist:
                     f"episodes | updating AniList entry to {new_status}"
                 )
 
-                self.__update_episode_incremental(series, watched_episode_count, anilist_episodes_watched, new_status, plex_rating)
+                self.__update_episode_incremental(
+                    series, watched_episode_count, anilist_episodes_watched, new_status, plex_rating
+                )
                 return
             elif watched_episode_count == anilist_episodes_watched:
                 if plex_rating and series.score != plex_rating and self.graphql.sync_ratings:
@@ -613,7 +663,9 @@ class Anilist:
                     # Since AniList episode count is higher we don't loop thru
                     # updating the notification feed and just set the AniList
                     # episode count once
-                    self.graphql.update_series(series.anilist_id, watched_episode_count, "CURRENT", plex_rating)
+                    self.graphql.update_series(
+                        series.anilist_id, watched_episode_count, "CURRENT", plex_rating
+                    )
                     return
                 else:
                     logger.info(
@@ -633,26 +685,36 @@ class Anilist:
                         f"Episodes watched was higher on AniList [{anilist_episodes_watched}] than on Plex [{watched_episode_count}] so skipping update"
                     )
             elif anilist_total_episodes <= 0:
-                logger.info(
-                    "AniList total episodes was 0 so most likely invalid data"
-                )
+                logger.info("AniList total episodes was 0 so most likely invalid data")
 
     def __update_episode_incremental(
-        self, series: AnilistSeries, watched_episode_count: int, anilist_episodes_watched: int, new_status: str,
-        plex_rating: int
+        self,
+        series: AnilistSeries,
+        watched_episode_count: int,
+        anilist_episodes_watched: int,
+        new_status: str,
+        plex_rating: int,
     ):
         # calculate episode difference
         episode_difference = watched_episode_count - anilist_episodes_watched
         # If episode difference exceeds 32 only update most recent as otherwise will flood the notification feed.
         # Also set it to the max episode count directly if the series was completed.
         if episode_difference > 32 or new_status == "COMPLETED":
-            self.graphql.update_series(series.anilist_id, watched_episode_count, new_status, plex_rating)
+            self.graphql.update_series(
+                series.anilist_id, watched_episode_count, new_status, plex_rating
+            )
         else:
             # send 1 update per watched episode for the activity feed
-            for current_episodes_watched in range(anilist_episodes_watched + 1, watched_episode_count + 1):
-                self.graphql.update_series(series.anilist_id, current_episodes_watched, new_status, plex_rating)
+            for current_episodes_watched in range(
+                anilist_episodes_watched + 1, watched_episode_count + 1
+            ):
+                self.graphql.update_series(
+                    series.anilist_id, current_episodes_watched, new_status, plex_rating
+                )
 
-    def __retrieve_season_mappings(self, title: str, guid: str, season: int) -> List[AnilistCustomMapping]:
+    def __retrieve_season_mappings(
+        self, title: str, guid: str, season: int
+    ) -> List[AnilistCustomMapping]:
         season_mappings: List[AnilistCustomMapping] = []
 
         if self.custom_mappings:
@@ -691,4 +753,6 @@ class Anilist:
         return episodes_in_anilist_entry
 
     def __clean_title(self, title: str) -> str:
-        return re.sub(r'[^A-Za-z0-9\p{IsHan}\p{IsBopo}\p{IsHira}\p{IsKatakana}]+', "", title.lower().strip())
+        return re.sub(
+            r"[^A-Za-z0-9\p{IsHan}\p{IsBopo}\p{IsHira}\p{IsKatakana}]+", "", title.lower().strip()
+        )
